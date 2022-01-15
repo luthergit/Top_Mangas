@@ -36,10 +36,13 @@ for unique_genres in top_manga_copy['Genres']:
 top_manga_copy.drop(columns = 'Genres',inplace = True)
 top_manga_copy['Genres'] = unique_genres_dict
 
+#create dataframe with the count of the most ranked genres
+ranked = top_manga_copy.copy()
+ranked.sort_values(by = ['Ranked'], ascending = True, inplace = True)
 
 top_genres_for_rank = {}
 
-for genres in top_manga_copy['Genres']:
+for genres in ranked['Genres']:
     for genre in genres:
         if genre in top_genres_for_rank:
             top_genres_for_rank[genre] += 1
@@ -51,6 +54,9 @@ top_genres_for_rank_df = pd.DataFrame.from_dict(
 
 top_genres_for_rank_df.reset_index(inplace = True)
 top_genres_for_rank_df.rename(columns={"index": "Genres"},inplace = True)
+
+
+
 
 Published_Start_Date = []
 Published_End_Date = []
@@ -158,7 +164,7 @@ app.layout = html.Div([
                  html.H3('Select Genre(s) AND Statements:', style={'paddingRight':'30px'}),
                  dcc.Dropdown(id = 'genre-picker-AND', 
                               options = [{'label': i, 'value': i} for i in genres],
-                              value = ['Drama','Police'],
+                              value = ['Drama'],
                               multi = True
                               ),
                               
@@ -172,7 +178,7 @@ app.layout = html.Div([
                       style = {'width': '50%', 'display': 'inline-block'}),
              
              dcc.Graph(id='feature-grahic-AND',
-                      style = { 'display': 'inline-block'}),
+                      style = {'width': '50%', 'display': 'inline-block'}),
              
 ], style = {'padding': 10})
 
@@ -264,18 +270,18 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
 
     #Allows to select the all the years from the two time points on the silder, included '+1' to include the next year i.e. 2020 is 2019.
     df = top_manga_copy
-   # date = ((df['Published_Start_Date'] >= start_date) | (df['Published_Start_Date'].isna())) & ((
-    #df['Published_End_Date'] <= end_date) | (
-    #df['Published_End_Date'].isna()))
+    date = ((df['Published_Start_Date'] >= start_date) | (df['Published_Start_Date'].isna())) & ((
+    df['Published_End_Date'] <= end_date) | (
+    df['Published_End_Date'].isna()))
 
         
     #To select and include all the data for the years stored in value
     
-    #filtered_type = df.copy().loc[date]
-    #filtered_type = filtered_type[filtered_type["Type"].copy().isin(type_picker)]
+    filtered_type = df.copy().loc[date]
+    filtered_type = filtered_type[filtered_type["Type"].copy().isin(type_picker)]
     
-    #filtered_type = filtered_type[filtered_type['Status'].copy().isin(status_picker)]
-    filtered_type = df
+    filtered_type = filtered_type[filtered_type['Status'].copy().isin(status_picker)]
+    
     selected_genres = []
     for genres in filtered_type['Genres']:
 
@@ -293,7 +299,7 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
 
     #filtered_type = filtered_type[filtered_type["Genres"].copy().isin(genre_picker)]
     
-    filtered_type = filtered_test
+    #filtered_type = filtered_test
     
     # filtered_platform = filtered_platform.dropna(subset = [yaxis_name])
 
@@ -301,8 +307,8 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
 
     # Sorting the platform by alphabetical order
     
-    for types_unique in filtered_type["Type"].unique():
-        df_by_type = filtered_type[filtered_type["Type"] == types_unique]
+    for types_unique in filtered_test["Type"].unique():
+        df_by_type = filtered_test[filtered_test["Type"] == types_unique]
         traces.append(
             go.Bar(
                 x=df_by_type[xaxis_name],
@@ -320,7 +326,7 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
     return {
         "data": traces,
         "layout": go.Layout(
-            # title="Top Manga+ Dashboard",
+            #title="Top Manga+ Dashboard",
             xaxis={"title": xaxis_name,'categoryorder':'sum descending' }, #it sorts from descending
             yaxis={"title": yaxis_name},
             barmode="stack",

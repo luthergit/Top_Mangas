@@ -145,21 +145,34 @@ app.layout = html.Div([
              
             
             html.Div([
-                 html.H3('Select Genre(s):', style={'paddingRight':'30px'}),
+                 html.H3('Select Genre(s) OR Statements:', style={'paddingRight':'30px'}),
                  dcc.Dropdown(id = 'genre-picker', 
                               options = [{'label': i, 'value': i} for i in genres],
                               value = genres,
                               multi = True
                               ),
                               
-             ], style = {'width': '30%', 'display': 'inline', 'verticalAlign':'top'}), #allows the dropdown to be next to each other 
+             ], style = {'width': '30%', 'display': 'inline', 'verticalAlign':'top'}), #allows the dropdown to be next to each other
+
+             html.Div([
+                 html.H3('Select Genre(s) AND Statements:', style={'paddingRight':'30px'}),
+                 dcc.Dropdown(id = 'genre-picker-AND', 
+                              options = [{'label': i, 'value': i} for i in genres],
+                              value = ['Drama','Police'],
+                              multi = True
+                              ),
+                              
+             ], style = {'width': '30%', 'display': 'inline', 'verticalAlign':'top'}), #allows the dropdown to be next to each other
 
             
             dcc.Graph(id='feature-graphic',
                       style = {'width': '50%', 'display': 'inline-block'}),
 
-            dcc.Graph(id='genre-graphic',
+            dcc.Graph(id='top-rank-genres',
                       style = {'width': '50%', 'display': 'inline-block'}),
+             
+             dcc.Graph(id='feature-grahic-AND',
+                      style = { 'display': 'inline-block'}),
              
 ], style = {'padding': 10})
 
@@ -226,7 +239,7 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
         )
 
     return {
-        "data": traces[:25],
+        "data": traces,
         "layout": go.Layout(
             # title="Top Manga+ Dashboard",
             xaxis={"title": xaxis_name, 'categoryorder':'sum descending'}, #it sorts from descending
@@ -236,7 +249,87 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
         ),
     }
 
-@app.callback(Output(component_id = 'genre-graphic', component_property = 'figure'),            
+# OR Statements
+@app.callback(Output(component_id = 'feature-grahic-AND', component_property = 'figure'),
+             [Input(component_id = 'x-axis', component_property = 'value')],
+             [Input(component_id = 'y-axis', component_property = 'value')],
+             [Input(component_id = 'type-picker', component_property = 'value')],
+             [Input(component_id = 'year-picker', component_property = 'start_date')],
+             [Input(component_id = 'year-picker', component_property = 'end_date')],
+             [Input(component_id = 'genre-picker-AND', component_property = 'value')],
+             [Input(component_id = 'status-picker', component_property = 'value')])
+
+def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_picker_AND,status_picker):
+
+
+    #Allows to select the all the years from the two time points on the silder, included '+1' to include the next year i.e. 2020 is 2019.
+    df = top_manga_copy
+   # date = ((df['Published_Start_Date'] >= start_date) | (df['Published_Start_Date'].isna())) & ((
+    #df['Published_End_Date'] <= end_date) | (
+    #df['Published_End_Date'].isna()))
+
+        
+    #To select and include all the data for the years stored in value
+    
+    #filtered_type = df.copy().loc[date]
+    #filtered_type = filtered_type[filtered_type["Type"].copy().isin(type_picker)]
+    
+    #filtered_type = filtered_type[filtered_type['Status'].copy().isin(status_picker)]
+    filtered_type = df
+    selected_genres = []
+    for genres in filtered_type['Genres']:
+
+
+# To check that test has genres elements,
+        check =  all(item in genres for item in genre_picker_AND)
+
+        if check is True:
+            selected_genres.append(genres)
+        #print("The list {} contains all elements of the list {}".format(genre_picker, genres))
+            filtered_test = filtered_type[filtered_type['Genres'].isin(selected_genres)]
+        else:
+            filtered_test = filtered_type[filtered_type['Genres'].isin(selected_genres)]  
+
+
+    #filtered_type = filtered_type[filtered_type["Genres"].copy().isin(genre_picker)]
+    
+    filtered_type = filtered_test
+    
+    # filtered_platform = filtered_platform.dropna(subset = [yaxis_name])
+
+    traces = []
+
+    # Sorting the platform by alphabetical order
+    
+    for types_unique in filtered_type["Type"].unique():
+        df_by_type = filtered_type[filtered_type["Type"] == types_unique]
+        traces.append(
+            go.Bar(
+                x=df_by_type[xaxis_name],
+                y=df_by_type[yaxis_name],
+                # mode = 'markers',
+                # opacity = 0.7,
+                #hovertext=np.round(df_by_type[yaxis_name].sum(),2),
+                #text = np.round(df_by_platform['NA_Sales'].sum(),2),
+                # marker = {'size': 15},
+                name=types_unique,
+                #textposition='auto',
+            )
+        )
+
+    return {
+        "data": traces,
+        "layout": go.Layout(
+            # title="Top Manga+ Dashboard",
+            xaxis={"title": xaxis_name,'categoryorder':'sum descending' }, #it sorts from descending
+            yaxis={"title": yaxis_name},
+            barmode="stack",
+            hovermode = 'closest'
+        ),
+    }
+
+
+@app.callback(Output(component_id = 'top-rank-genres', component_property = 'figure'),            
              [Input(component_id = 'genre-picker', component_property = 'value')])
              #[Input(component_id = 'status-picker', component_property = 'value')])
 
@@ -246,7 +339,7 @@ def update_figure_genre(genre_picker):
     #Allows to select the all the years from the two time points on the silder, included '+1' to include the next year i.e. 2020 is 2019.
     df = top_genres_for_rank_df
 
-    df = df[df["Genres"].copy().isin(genre_picker)]
+    #df = df[df["Genres"].copy().isin(genre_picker)]
     
     
     
@@ -275,7 +368,7 @@ def update_figure_genre(genre_picker):
     return {
         "data": traces,
         "layout": go.Layout(
-            title="Top Genres",
+            title="Top Ranked Genres",
             xaxis={"title": 'Genre', 'categoryorder':'sum descending'}, #it sorts from descending
             yaxis={"title": 'Count'},
             barmode="stack",

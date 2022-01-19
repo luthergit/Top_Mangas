@@ -179,6 +179,9 @@ app.layout = html.Div([
              
              dcc.Graph(id='feature-grahic-AND',
                       style = {'width': '50%', 'display': 'inline-block'}),
+
+             dcc.Graph(id='top-popular-genres',
+                      style = {'width': '50%', 'display': 'inline-block'}),
              
 ], style = {'padding': 10})
 
@@ -255,7 +258,7 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
         ),
     }
 
-# OR Statements
+# AND Statements
 @app.callback(Output(component_id = 'feature-grahic-AND', component_property = 'figure'),
              [Input(component_id = 'x-axis', component_property = 'value')],
              [Input(component_id = 'y-axis', component_property = 'value')],
@@ -336,18 +339,65 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
 
 
 @app.callback(Output(component_id = 'top-rank-genres', component_property = 'figure'),            
-             [Input(component_id = 'genre-picker', component_property = 'value')])
+             [Input(component_id = 'genre-picker', component_property = 'value')],
+             [Input(component_id = 'type-picker', component_property = 'value')],
+             [Input(component_id = 'year-picker', component_property = 'start_date')],
+             [Input(component_id = 'year-picker', component_property = 'end_date')],
+             [Input(component_id = 'status-picker', component_property = 'value')])
              #[Input(component_id = 'status-picker', component_property = 'value')])
 
-def update_figure_genre(genre_picker):
+def update_figure_genre(genre_picker, type_picker, start_date, end_date, status_picker):
 
 
     #Allows to select the all the years from the two time points on the silder, included '+1' to include the next year i.e. 2020 is 2019.
-    df = top_genres_for_rank_df
+    #df = top_genres_for_rank_df
+
+    #Allows to select the all the years from the two time points on the silder, included '+1' to include the next year i.e. 2020 is 2019.
+    df = top_manga_copy
+    date = ((df['Published_Start_Date'] >= start_date) | (df['Published_Start_Date'].isna())) & ((
+    df['Published_End_Date'] <= end_date) | (
+    df['Published_End_Date'].isna()))
+
+        
+    #To select and include all the data for the years stored in value
+    
+    filtered_type = df.copy().loc[date]
+    filtered_type = filtered_type[filtered_type["Type"].copy().isin(type_picker)]
+    filtered_type = filtered_type[filtered_type['Status'].copy().isin(status_picker)]
+
+    selected_genres = []
+    for x in genre_picker:
+        for y in filtered_type['Genres']:
+#     print(test in i)
+            if x in y:
+                selected_genres.append(y)
+        
+        
+    filtered_type = filtered_type[(filtered_type['Genres'].copy().isin(selected_genres))]
+
+
+    #create dataframe with the count of the most ranked genres
+    ranked_genre = filtered_type.copy()
+    ranked_genre.sort_values(by = ['Ranked'], ascending = True, inplace = True)
+
+    top_rank_genre = {}
+
+    for genres in ranked_genre['Genres']:
+        for genre in genres:
+            if genre in top_rank_genre:
+                top_rank_genre[genre] += 1
+            else:
+                top_rank_genre[genre] = 1
+
+    top_rank_genre_df = pd.DataFrame.from_dict(
+    top_rank_genre, orient='index', columns=['count'])
+
+    top_rank_genre_df.reset_index(inplace = True)
+    top_rank_genre_df.rename(columns={"index": "Genres"},inplace = True)
 
     #df = df[df["Genres"].copy().isin(genre_picker)]
     
-    
+    df_ranked = top_rank_genre_df
     
     # filtered_platform = filtered_platform.dropna(subset = [yaxis_name])
 
@@ -355,8 +405,8 @@ def update_figure_genre(genre_picker):
 
     # Sorting the platform by alphabetical order
     
-    for genres_unique in df["Genres"].sort_values(ascending = False):
-        df_by_genre = df[df["Genres"] == genres_unique]
+    for genres_unique in df_ranked["Genres"].sort_values(ascending = False):
+        df_by_genre = df_ranked[df_ranked["Genres"] == genres_unique]
         traces.append(
             go.Bar(
                 x=df_by_genre['Genres'],
@@ -375,6 +425,100 @@ def update_figure_genre(genre_picker):
         "data": traces,
         "layout": go.Layout(
             title="Top Ranked Genres",
+            xaxis={"title": 'Genre', 'categoryorder':'sum descending'}, #it sorts from descending
+            yaxis={"title": 'Count'},
+            barmode="stack",
+            hovermode = 'closest'
+        ),
+    }
+
+@app.callback(Output(component_id = 'top-popular-genres', component_property = 'figure'),            
+             [Input(component_id = 'genre-picker', component_property = 'value')],
+             [Input(component_id = 'type-picker', component_property = 'value')],
+             [Input(component_id = 'year-picker', component_property = 'start_date')],
+             [Input(component_id = 'year-picker', component_property = 'end_date')],
+             [Input(component_id = 'status-picker', component_property = 'value')])
+             #[Input(component_id = 'status-picker', component_property = 'value')])
+
+def update_figure_genre(genre_picker, type_picker, start_date, end_date, status_picker):
+
+
+    #Allows to select the all the years from the two time points on the silder, included '+1' to include the next year i.e. 2020 is 2019.
+    #df = top_genres_for_rank_df
+
+    #Allows to select the all the years from the two time points on the silder, included '+1' to include the next year i.e. 2020 is 2019.
+    df = top_manga_copy
+    date = ((df['Published_Start_Date'] >= start_date) | (df['Published_Start_Date'].isna())) & ((
+    df['Published_End_Date'] <= end_date) | (
+    df['Published_End_Date'].isna()))
+
+        
+    #To select and include all the data for the years stored in value
+    
+    filtered_type = df.copy().loc[date]
+    filtered_type = filtered_type[filtered_type["Type"].copy().isin(type_picker)]
+    filtered_type = filtered_type[filtered_type['Status'].copy().isin(status_picker)]
+
+    selected_genres = []
+    for x in genre_picker:
+        for y in filtered_type['Genres']:
+#     print(test in i)
+            if x in y:
+                selected_genres.append(y)
+        
+        
+    filtered_type = filtered_type[(filtered_type['Genres'].copy().isin(selected_genres))]
+
+
+    #create dataframe with the count of the most ranked genres
+    popular_genre = filtered_type.copy()
+    popular_genre.sort_values(by = ['Popularity'], ascending = True, inplace = True)
+
+    top_popular_genre = {}
+
+    for genres in popular_genre['Genres']:
+        for genre in genres:
+            if genre in top_popular_genre:
+                top_popular_genre[genre] += 1
+            else:
+                top_popular_genre[genre] = 1
+
+    top_popular_genre_df = pd.DataFrame.from_dict(
+    top_popular_genre, orient='index', columns=['count'])
+
+    top_popular_genre_df.reset_index(inplace = True)
+    top_popular_genre_df.rename(columns={"index": "Genres"},inplace = True)
+
+    #df = df[df["Genres"].copy().isin(genre_picker)]
+    
+    df_popular = top_popular_genre_df
+    
+    # filtered_platform = filtered_platform.dropna(subset = [yaxis_name])
+
+    traces = []
+
+    # Sorting the platform by alphabetical order
+    
+    for genres_unique in df_popular["Genres"].sort_values(ascending = False):
+        df_by_genre = df_popular[df_popular["Genres"] == genres_unique]
+        traces.append(
+            go.Bar(
+                x=df_by_genre['Genres'],
+                y=df_by_genre['count'],
+                # mode = 'markers',
+                # opacity = 0.7,
+                #hovertext=np.round(df_by_type[yaxis_name].sum(),2),
+                #text = np.round(df_by_platform['NA_Sales'].sum(),2),
+                # marker = {'size': 15},
+                name=genres_unique,
+                #textposition='auto',
+            )
+        )
+
+    return {
+        "data": traces,
+        "layout": go.Layout(
+            title="Top Popular Genres",
             xaxis={"title": 'Genre', 'categoryorder':'sum descending'}, #it sorts from descending
             yaxis={"title": 'Count'},
             barmode="stack",

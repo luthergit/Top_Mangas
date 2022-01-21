@@ -10,17 +10,17 @@ from datetime import datetime
 from dash.dependencies import Input, Output
 
 top_manga = pd.read_csv('top500mangaMAL.csv')
-top_manga_copy = top_manga
+top_manga_copy = top_manga.copy()
 
 # Replace unknown english titles with the synomims and Japanese
 
 top_manga_copy['English Title'].loc[(
-    top_manga_copy['English Title'] == 'Unknown')] = top_manga_copy['Synonims Titles'].str[:25]
+    top_manga_copy['English Title'] == 'Unknown')] = top_manga_copy['Synonims Titles'].copy().str[:25]
 
 top_manga_copy['English Title'].loc[(
-    top_manga_copy['English Title'] == 'Unknown')] = top_manga_copy['Japanese Title']
+    top_manga_copy['English Title'] == 'Unknown')] = top_manga_copy['Japanese Title'].copy()
 
-top_manga_copy['Genres'] = top_manga_copy['Genres'].str.replace(
+top_manga_copy['Genres'] = top_manga_copy['Genres'].copy().str.replace(
     '[', '').str.replace(']', '').str.replace("'", '').str.replace(' ', '').str.split(',')
 
 
@@ -71,7 +71,7 @@ top_manga_copy['Published_Start_Date'] = Published_Start_Date
 top_manga_copy['Published_End_Date'] = Published_End_Date    
 
 # replace "Unknown', " with nan
-top_manga_copy['Published_Start_Date'] = top_manga_copy['Published_Start_Date'].replace("Unknown', ",np.nan)
+top_manga_copy['Published_Start_Date'] = top_manga_copy['Published_Start_Date'].copy().replace("Unknown', ",np.nan)
 
 top_manga_copy['Published_Start_Date'] = pd.to_datetime(top_manga_copy['Published_Start_Date'], errors = 'coerce',
                                                        )
@@ -88,19 +88,28 @@ for index, row in top_manga_copy.iterrows():
 top_manga_copy['Author'] = authors    
 
 #Get the column names
-features = top_manga_copy.columns.sort_values(ascending = True)
+features_y = top_manga_copy.copy().drop(
+    columns = ['Synonims Titles','Status','Serialization','Ranked',
+               'Ranked','Published_Start_Date','Published_End_Date',
+               'Published Dates','Published','Manga URL',
+               'Author']).columns.sort_values(ascending = True)
+features_x = top_manga_copy.copy().drop(
+    columns = ['Chapters','Favorites','Genres','Manga ID', 'Manga URL',
+              'Published','Published Dates', 'Manga URL','Manga ID',
+               'Score Voted By']).columns.sort_values(ascending = True)
+
 
 #Get the genres
-genres = top_genres_for_rank_df['Genres'].sort_values(ascending = True).unique()
+genres = top_genres_for_rank_df['Genres'].copy().sort_values(ascending = True).unique()
 
 #Get the authors
-authors = top_manga_copy['Author'].sort_values(ascending = True).unique()
+authors = top_manga_copy['Author'].copy().sort_values(ascending = True).unique()
 
-#Get the authors
-types = top_manga_copy['Type'].sort_values(ascending = True).unique()
+#Get the types
+types = top_manga_copy['Type'].copy().sort_values(ascending = True).unique()
 
-#Get the authors
-status = top_manga_copy['Status'].sort_values(ascending = True).unique()
+#Get the status
+status = top_manga_copy['Status'].copy().sort_values(ascending = True).unique()
 
 app = dash.Dash()
 
@@ -110,15 +119,15 @@ app.layout = html.Div([
              html.Div([
                  html.H3('Select X axis column:', style={'paddingRight':'30px'}),
                  dcc.Dropdown(id = 'x-axis', 
-                              options = [{'label': i, 'value': i} for i in features],
+                              options = [{'label': i, 'value': i} for i in features_x],
                               value = 'Type'),
              ], style = {'width': '15%', 'display': 'inline-block', 'verticalAlign':'top'}), #allows the dropdown to be next to each other
              html.Div([
                  html.H3('Select Y axis column:', style={'paddingRight':'30px'}),
                  dcc.Dropdown(id = 'y-axis', 
-                              options = [{'label': i, 'value': i} for i in features],
+                              options = [{'label': i, 'value': i} for i in features_y],
                               value = 'Members'), 
-                              
+                         
              ], style = {'width': '15%', 'display': 'inline-block', 'verticalAlign':'top'}), #allows the dropdown to be next to each other
 
              html.Div([
@@ -162,10 +171,10 @@ app.layout = html.Div([
                  dcc.Dropdown(id = 'genre-picker', 
                               options = [{'label': i, 'value': i} for i in genres],
                               value = genres,
-                              multi = True
+                              multi = True,
                               ),
                               
-             ], style = {'width': '30%', 'display': 'inline', 'verticalAlign':'top'}), #allows the dropdown to be next to each other
+             ], style = {'width': '30%', 'display': 'none', 'verticalAlign':'top'}), #allows the dropdown to be next to each other
 
              html.Div([
                  html.H3('Select Genre(s) AND Statements:', style={'paddingRight':'30px'}),
@@ -173,7 +182,7 @@ app.layout = html.Div([
                               options = [{'label': i, 'value': i} for i in genres],
                               value = ['Drama'],
                               multi = True
-                              ),
+                             ),
                               
              ], style = {'width': '30%', 'display': 'inline', 'verticalAlign':'top'}), #allows the dropdown to be next to each other
 
@@ -206,7 +215,7 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
 
 
     #Allows to select the all the dates from the two time points on the silder including nan values
-    df = top_manga_copy
+    df = top_manga_copy.copy()
     date = ((df['Published_Start_Date'] >= start_date) | (df['Published_Start_Date'].isna())) & ((
     df['Published_End_Date'] <= end_date) | (
     df['Published_End_Date'].isna()))
@@ -215,8 +224,8 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
     #To select and include all the data for the dates, type and status
     
     filtered_type = df.copy().loc[date]
-    filtered_type = filtered_type[filtered_type["Type"].copy().isin(type_picker)]
-    filtered_type = filtered_type[filtered_type['Status'].copy().isin(status_picker)]
+    filtered_type = filtered_type.copy()[filtered_type["Type"].copy().isin(type_picker)]
+    filtered_type = filtered_type.copy()[filtered_type['Status'].copy().isin(status_picker)]
 
     selected_genres = []
     for x in genre_picker:
@@ -232,7 +241,7 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
 
     
     for types_unique in filtered_type["Type"].unique():
-        df_by_type = filtered_type[filtered_type["Type"] == types_unique]
+        df_by_type = filtered_type.copy()[filtered_type["Type"] == types_unique]
         traces.append(
             go.Bar(
                 x=df_by_type[xaxis_name],
@@ -250,7 +259,7 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
     return {
         "data": traces,
         "layout": go.Layout(
-            # title="Top Manga+ Dashboard",
+            title="All Genres",
             xaxis={"title": xaxis_name, 'categoryorder':'sum descending'}, #it sorts from descending
             yaxis={"title": yaxis_name},
             barmode="stack",
@@ -272,7 +281,7 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
 
 
     #Allows to select the all the dates from the two time points on the silder including nan values
-    df = top_manga_copy
+    df = top_manga_copy.copy()
     date = ((df['Published_Start_Date'] >= start_date) | (df['Published_Start_Date'].isna())) & ((
     df['Published_End_Date'] <= end_date) | (
     df['Published_End_Date'].isna()))
@@ -281,9 +290,9 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
     #To select and include all the data for the dates, type and status
     
     filtered_type = df.copy().loc[date]
-    filtered_type = filtered_type[filtered_type["Type"].copy().isin(type_picker)]
+    filtered_type = filtered_type.copy()[filtered_type["Type"].copy().isin(type_picker)]
     
-    filtered_type = filtered_type[filtered_type['Status'].copy().isin(status_picker)]
+    filtered_type = filtered_type.copy()[filtered_type['Status'].copy().isin(status_picker)]
     
     selected_genres = []
     for genres in filtered_type['Genres']:
@@ -296,9 +305,9 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
         if check is True:
             selected_genres.append(genres)
         #print("The list {} contains all elements of the list {}".format(genre_picker, genres))
-            filtered_test = filtered_type[filtered_type['Genres'].isin(selected_genres)]
+            filtered_test = filtered_type.copy()[filtered_type['Genres'].isin(selected_genres)]
         else:
-            filtered_test = filtered_type[filtered_type['Genres'].isin(selected_genres)]  
+            filtered_test = filtered_type.copy()[filtered_type['Genres'].isin(selected_genres)]  
 
 
     traces = []
@@ -324,7 +333,7 @@ def update_figure(xaxis_name, yaxis_name,type_picker,start_date, end_date,genre_
     return {
         "data": traces,
         "layout": go.Layout(
-            #title="Top Manga+ Dashboard",
+            title="Specific Genres",
             xaxis={"title": xaxis_name,'categoryorder':'sum descending' }, #it sorts from descending
             yaxis={"title": yaxis_name},
             barmode="stack",
@@ -345,7 +354,7 @@ def update_figure_genre(genre_picker, type_picker, start_date, end_date, status_
 
 
     #Allows to select the all the dates from the two time points on the silder including nan values
-    df = top_manga_copy
+    df = top_manga_copy.copy()
     date = ((df['Published_Start_Date'] >= start_date) | (df['Published_Start_Date'].isna())) & ((
     df['Published_End_Date'] <= end_date) | (
     df['Published_End_Date'].isna()))
@@ -354,8 +363,8 @@ def update_figure_genre(genre_picker, type_picker, start_date, end_date, status_
     #To select and include all the data for the dates, type and status
     
     filtered_type = df.copy().loc[date]
-    filtered_type = filtered_type[filtered_type["Type"].copy().isin(type_picker)]
-    filtered_type = filtered_type[filtered_type['Status'].copy().isin(status_picker)]
+    filtered_type = filtered_type.copy()[filtered_type["Type"].copy().isin(type_picker)]
+    filtered_type = filtered_type.copy()[filtered_type['Status'].copy().isin(status_picker)]
 
     selected_genres = []
     for x in genre_picker:
@@ -432,7 +441,7 @@ def update_figure_genre(genre_picker, type_picker, start_date, end_date, status_
 def update_figure_genre(genre_picker, type_picker, start_date, end_date, status_picker):
 
     #Allows to select the all the dates from the two time points on the silder including nan values
-    df = top_manga_copy
+    df = top_manga_copy.copy()
     date = ((df['Published_Start_Date'] >= start_date) | (df['Published_Start_Date'].isna())) & ((
     df['Published_End_Date'] <= end_date) | (
     df['Published_End_Date'].isna()))
@@ -441,8 +450,8 @@ def update_figure_genre(genre_picker, type_picker, start_date, end_date, status_
     #To select and include all the data for the dates, type and status
     
     filtered_type = df.copy().loc[date]
-    filtered_type = filtered_type[filtered_type["Type"].copy().isin(type_picker)]
-    filtered_type = filtered_type[filtered_type['Status'].copy().isin(status_picker)]
+    filtered_type = filtered_type.copy()[filtered_type["Type"].copy().isin(type_picker)]
+    filtered_type = filtered_type.copy()[filtered_type['Status'].copy().isin(status_picker)]
 
     selected_genres = []
     for x in genre_picker:

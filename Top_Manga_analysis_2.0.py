@@ -111,8 +111,13 @@ types = top_manga_copy['Type'].copy().sort_values(ascending = True).unique()
 #Get the status
 status = top_manga_copy['Status'].copy().sort_values(ascending = True).unique()
 
-app = dash.Dash()
+USERNAME_PASSWORD_PAIRS = [
+['TopManga', 'Berserk'],['LnD', 'fallenwanderer']
+]
 
+app = dash.Dash()
+auth = dash_auth.BasicAuth(app,USERNAME_PASSWORD_PAIRS)
+server = app.server
 
 app.layout = html.Div([
              html.H1('Manga Analysis Dashboard'),
@@ -167,7 +172,7 @@ app.layout = html.Div([
              
             
             html.Div([
-                 html.H3('Select Genre(s) OR Statements:', style={'paddingRight':'30px'}),
+                html.H3('Select Specific Genre(s) OR Statement:', style={'paddingRight':'30px'}),
                  dcc.Dropdown(id = 'genre-picker', 
                               options = [{'label': i, 'value': i} for i in genres],
                               value = genres,
@@ -177,7 +182,7 @@ app.layout = html.Div([
              ], style = {'width': '30%', 'display': 'none', 'verticalAlign':'top'}), #allows the dropdown to be next to each other
 
              html.Div([
-                 html.H3('Select Genre(s) AND Statements:', style={'paddingRight':'30px'}),
+                 html.H3('Select Specific  Genre(s):', style={'paddingRight':'30px'}),
                  dcc.Dropdown(id = 'genre-picker-AND', 
                               options = [{'label': i, 'value': i} for i in genres],
                               value = ['Drama'],
